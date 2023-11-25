@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime"
 	"sync"
+	"time"
 )
 
 type Server struct {
-	Ip string
+	Ip   string
 	Port int
 
 	OnlineMap map[string]*User
-	mapLock sync.RWMutex
+	mapLock   sync.RWMutex
 
 	Message chan string
 }
@@ -20,14 +22,14 @@ type Server struct {
 // NewServer creates a new server instance
 func NewServer(ip string, port int) *Server {
 	return &Server{
-		Ip: ip,
-		Port: port,
+		Ip:        ip,
+		Port:      port,
 		OnlineMap: make(map[string]*User),
-		Message: make(chan string),
+		Message:   make(chan string),
 	}
 }
 
-func (this *Server) ListenMessage()  {
+func (this *Server) ListenMessage() {
 	for {
 		msg := <-this.Message
 
@@ -39,15 +41,17 @@ func (this *Server) ListenMessage()  {
 	}
 }
 
-func (this *Server) BroadCast(user *User, msg string)  {
+func (this *Server) BroadCast(user *User, msg string) {
 	sendMsg := "[" + user.Addr + "]" + user.Name + ":" + msg
 	this.Message <- sendMsg
 }
 
-func (this *Server) Handler(conn net.Conn)  {
+func (this *Server) Handler(conn net.Conn) {
 	user := NewUser(conn, this)
 
 	user.Online()
+
+	isLive := make(chan bool)
 
 	go func() {
 		buf := make([]byte, 4096)
@@ -65,14 +69,25 @@ func (this *Server) Handler(conn net.Conn)  {
 			msg := string(buf[:n-1])
 
 			user.DoMessage(msg)
+
+			isLive <- true
 		}
 	}()
 
-	select {}
+	for {
+		select {
+		case <-isLive:
+		case <-time.After(time.Second * 10):
+			user.SendMsg("you are inactive for 10 seconds, you will be kicked out\n")
+			close(user.C)
+			conn.Close()
+			runtime.Goexit()
+		}
+	}
 }
 
 // Start starts the server
-func (this *Server) Start()  {
+func (this *Server) Start() {
 	// socket listen
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", this.Ip, this.Port))
 	if err != nil {

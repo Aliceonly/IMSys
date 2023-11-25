@@ -18,10 +18,10 @@ type User struct {
 func NewUser(conn net.Conn, server *Server) *User {
 	userAddr := conn.RemoteAddr().String()
 	user := &User{
-		Name: userAddr,
-		Addr: userAddr,
-		C:    make(chan string),
-		conn: conn,
+		Name:   userAddr,
+		Addr:   userAddr,
+		C:      make(chan string),
+		conn:   conn,
 		server: server,
 	}
 	go user.ListenMessage()
@@ -75,6 +75,23 @@ func (this *User) DoMessage(msg string) {
 			this.Name = newName
 			this.SendMsg("rename username success\n")
 		}
+	} else if len(msg) > 4 && msg[:3] == "to|" {
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			this.SendMsg("message format error, example: to|username|hello\n")
+			return
+		}
+		remoteUser, ok := this.server.OnlineMap[remoteName]
+		if !ok {
+			this.SendMsg("user not exists\n")
+			return
+		}
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			this.SendMsg("message format error, example: to|username|hello\n")
+			return
+		}
+		remoteUser.SendMsg(this.Name + " say: " + content + "\n")
 	} else {
 		this.server.BroadCast(this, msg)
 	}
