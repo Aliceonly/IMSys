@@ -32,7 +32,7 @@ func NewClient(serverIp string, serverPort int) *Client {
 }
 
 func (client *Client) DealResponse() {
-	io.Copy(os.Stdout, client.conn) 
+	io.Copy(os.Stdout, client.conn)
 }
 
 func (client *Client) menu() bool {
@@ -67,6 +67,45 @@ func (client *Client) PublicChat() {
 		chatMsg = ""
 		fmt.Println(">>>>>> input message")
 		fmt.Scanln(&chatMsg)
+	}
+}
+
+func (client *Client) SelectUsers() {
+	sendMsg := "who\n"
+	_, err := client.conn.Write([]byte(sendMsg))
+	if err != nil {
+		fmt.Println("conn.Write err:", err)
+		return
+	}
+}
+
+func (client *Client) PrivateChat() {
+	var remoteName string
+	var chatMsg string
+
+	client.SelectUsers()
+	fmt.Println(">>>>>> input remote user")
+	fmt.Scanln(&remoteName)
+
+	for remoteName != "exit" {
+		fmt.Println(">>>>>> input message")
+		fmt.Scanln(&chatMsg)
+		for chatMsg != "exit" {
+			if len(chatMsg) != 0 {
+				sendMsg := "to|" + remoteName + "|" + chatMsg + "\n\n"
+				_, err := client.conn.Write([]byte(sendMsg))
+				if err != nil {
+					fmt.Println("conn.Write err:", err)
+					break
+				}
+			}
+			chatMsg = ""
+			fmt.Println(">>>>>> input message")
+			fmt.Scanln(&chatMsg)
+		}
+		client.SelectUsers()
+		fmt.Println(">>>>>> input remote user")
+		fmt.Scanln(&remoteName)
 	}
 }
 
