@@ -51,6 +51,25 @@ func (client *Client) menu() bool {
 	}
 }
 
+func (client *Client) PublicChat() {
+	var chatMsg string
+	fmt.Println(">>>>>> input message")
+	fmt.Scanln(&chatMsg)
+	for chatMsg != "exit" {
+		if len(chatMsg) != 0 {
+			sendMsg := chatMsg + "\n"
+			_, err := client.conn.Write([]byte(sendMsg))
+			if err != nil {
+				fmt.Println("conn.Write err:", err)
+				break
+			}
+		}
+		chatMsg = ""
+		fmt.Println(">>>>>> input message")
+		fmt.Scanln(&chatMsg)
+	}
+}
+
 func (client *Client) Rename() bool {
 	fmt.Println(">>>>>> input new name")
 	fmt.Scanln(&client.Name)
