@@ -77,7 +77,7 @@ func (this *Server) Handler(conn net.Conn) {
 	for {
 		select {
 		case <-isLive:
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Second * 100):
 			user.SendMsg("you are inactive for 10 seconds, you will be kicked out\n")
 			close(user.C)
 			conn.Close()
